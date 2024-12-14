@@ -28,6 +28,17 @@ type FBAddress struct {
 	UserDefined       bool   `json:"userDefined"`
 }
 
+type FBVaultWallet struct {
+	ID                string `json:"id"`
+	Address           string `json:"address"`
+	LegacyAddress     string `json:"legacyAddress,omitempty"`
+	EnterpriseAddress string `json:"enterpriseAddress,omitempty"`
+	Tag               string `json:"tag,omitempty"`
+	EosAccountName    string `json:"eosAccountName,omitempty"`
+	Status            string `json:"status,omitempty"` // TODO: use an enum.
+	ActivationTxId    string `json:"activationTxId,omitempty"`
+}
+
 // Fireblocks addresses object, wrapping an array of address objects.
 type FBAddresses struct {
 	Addresses []FBAddress `json:"addresses"`
@@ -111,11 +122,49 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 	w.Write(addresses)
 }
 
+// Handler to create a new vault wallet.
+func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
+	// TODO: support Idempotency-Key.
+
+	vaultAccountId := chi.URLParam(r, "vaultAccountId")
+	assetId := chi.URLParam(r, "assetId")
+
+	if vaultAccountId == "" {
+		// I made this error up, it's not documented what fb would return.
+		writeError(w, http.StatusBadRequest, "vaultAccountId is required", 0)
+		return
+	}
+
+	// TODO: support more assets.
+	if assetId != "BTC" {
+		// See https://developers.fireblocks.com/reference/api-responses#api-error-codes.
+		writeError(w, http.StatusNotFound, "Asset doesn't exist", 1006)
+		return
+	}
+
+	address, err := generateAddress()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error(), 0)
+		return
+	}
+
+	id := "1" // TODO: random integer?
+	fbVaultWallet := FBVaultWallet{ID: id, Address: address}
+	response, err := json.MarshalIndent(fbVaultWallet, "", "  ")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error(), 0)
+		return
+	}
+
+	w.Write(append(response, []byte{10}...))
+}
+
 func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Get("/v1/vault/accounts/{vaultAccountId}/{assetId}/addresses_paginate", handleGetAddresses)
+	r.Post("/v1/vault/accounts/{vaultAccountId}/{assetId}", handlePostCreateVaultAccountAsset)
 
 	address := "localhost:6200"
 	log.Printf("listening on http://%s/", address)
