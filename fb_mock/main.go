@@ -43,6 +43,30 @@ type FBVaultWallet struct {
 	ActivationTxId    string `json:"activationTxId,omitempty"`
 }
 
+// Fireblocks vault asset, embedded in FBVaultAccount
+type FBVaultAsset struct {
+	ID            string `json:"id"`
+	Total         string `json:"total"`
+	Available     string `json:"available"`
+	Pending       string `json:"pending"`
+	Frozen        string `json:"frozen"`
+	LockedAmmount string `json:"lockedAmount"`
+	BlockHeight   string `json:"blockHeight"`
+	BlockHash     string `json:"blockHash"`
+	// RewardsInfo struct TODO
+}
+
+// Fireblocks Vault, see
+// https://developers.fireblocks.com/reference/createvaultaccount.
+type FBVaultAccount struct {
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Assets        []FBVaultAsset `json:"assets"`
+	HiddenOnUI    bool           `json:"hiddenOnUI"`
+	CustomerRefId string         `json:"customerRefId"`
+	AutoFuel      string         `json:"autoFuel"`
+}
+
 // Fireblocks addresses object, wrapping an array of address objects.
 // See https://developers.fireblocks.com/reference/getvaultaccountassetaddressespaginated.
 type FBAddresses struct {
@@ -103,6 +127,36 @@ func writeError(w http.ResponseWriter, httpErrorCode int, message string, apiErr
 	fbError, _ := json.MarshalIndent(FBError{apiErrorCode, message}, "", "  ")
 	w.WriteHeader(httpErrorCode)
 	w.Write(fbError)
+}
+
+// Handler to create a new vault. See
+// https://developers.fireblocks.com/reference/createvaultaccount.
+func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
+	// TODO: support Idempotency-Key.
+
+	// The documentation on this endpoint is unclear, but the example requuest
+	// only sends two fields, both of which are explicitly optional, so we infer
+	// that all fields are optional which, for our purposes, means we can ignore
+	// them.
+	//
+	// TODO: support optional fields.
+
+	// This isn't documented, but from the example response it seems to default
+	// to creating a single ETH wallet.
+	asset := FBVaultAsset{ID: "ETH"}
+	fbVaultAccount := FBVaultAccount{ID: strconv.Itoa(mrand.Int()), Assets: []FBVaultAsset{asset}}
+
+	response, err := json.MarshalIndent(fbVaultAccount, "", "  ")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error(), 0)
+		return
+	}
+
+	_, err = w.Write(binaryNewline(response))
+	// TODO: log errors in other handlers too.
+	if err != nil {
+		log.Print("Error writing response")
+	}
 }
 
 // Handler for the addresses_paginate endpoint.
@@ -179,6 +233,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Get("/v1/vault/accounts/{vaultAccountId}/{assetId}/addresses_paginate", handleGetAddresses)
 	r.Post("/v1/vault/accounts/{vaultAccountId}/{assetId}", handlePostCreateVaultAccountAsset)
+	r.Post("/v1/vault/accounts", handlePostCreateVaultAccount)
 
 	address := "localhost:6200"
 	log.Printf("listening on http://%s/", address)
