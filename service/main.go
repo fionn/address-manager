@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -45,6 +46,23 @@ func newWallet() (*Wallet, error) {
 	return &Wallet{AddressBTC: fbVaultWallet.Address}, nil
 }
 
+// Keep the wallet pool polulated.
+func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int) {
+	for {
+		select {
+		case <-ctx.Done():
+			// TODO: drain channel into persistent storage.
+			log.Println("Received cancellation")
+			return
+		default:
+			for len(c) < threshold {
+				wallet, _ := newWallet()
+				c <- *wallet
+			}
+		}
+	}
+}
+
 // This entry point exists for testing. We remove the on-disk database file if
 // it exists and create a new one, then add some example data.
 func main() {
@@ -54,8 +72,28 @@ func main() {
 		log.Fatalf("Failed to connect to the database: %s", err)
 	}
 
-	wallet, _ := newWallet()
-	fmt.Printf("%+v\n", wallet)
-
 	db.AutoMigrate(&User{})
+
+	threshold := 30
+	walletChannel := make(chan Wallet, threshold)
+	defer close(walletChannel)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// TODO: check persistent storage for unallocated wallets and add them to
+	// the pool first.
+
+	go populateWalletPool(walletChannel, ctx, threshold)
+
+	// We don't use a WaitGroup because we don't actually want to wait, just let
+	// the goroutine run until the process terminates to keep the pool
+	// topped-up.
+
+	user := User{}
+	db.Create(&user)
+	db.Model(&user).Update("Wallet", <-walletChannel)
+	fmt.Printf("%+v\n", user)
+
+	// TODO: catch signal and try to exit gracefully.
+	cancel()
+	// TODO: wait for wallet channel to be drained.
 }
