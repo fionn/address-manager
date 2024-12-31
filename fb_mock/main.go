@@ -13,7 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-// Fireblocks address object.
+// Fireblocks address object, embedded in FBAddresses.
 type FBAddress struct {
 	AssetId           string `json:"assetId"`
 	Address           string `json:"address"`
@@ -28,6 +28,8 @@ type FBAddress struct {
 	UserDefined       bool   `json:"userDefined"`
 }
 
+// Wallet object returned from
+// https://developers.fireblocks.com/reference/createvaultaccountasset.
 type FBVaultWallet struct {
 	ID                string `json:"id"`
 	Address           string `json:"address"`
@@ -40,6 +42,7 @@ type FBVaultWallet struct {
 }
 
 // Fireblocks addresses object, wrapping an array of address objects.
+// See https://developers.fireblocks.com/reference/getvaultaccountassetaddressespaginated.
 type FBAddresses struct {
 	Addresses []FBAddress `json:"addresses"`
 }
@@ -67,7 +70,7 @@ func binaryNewline(s []byte) []byte {
 }
 
 // Generate a random Bech32 address.
-func generateAddress() (string, error) {
+func generateBTCAddress() (string, error) {
 	// Because we're not using a real keypair, this is just fed into some hash
 	// functions. As such, we don't really care what it is, so just use some
 	// random bytes.
@@ -101,6 +104,7 @@ func writeError(w http.ResponseWriter, httpErrorCode int, message string, apiErr
 }
 
 // Handler for the addresses_paginate endpoint.
+// See https://developers.fireblocks.com/reference/getvaultaccountassetaddressespaginated.
 func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 	assetId := chi.URLParam(r, "assetId")
 
@@ -111,7 +115,7 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	address, err := generateAddress()
+	address, err := generateBTCAddress()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
@@ -128,6 +132,7 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 }
 
 // Handler to create a new vault wallet.
+// See https://developers.fireblocks.com/reference/createvaultaccountasset.
 func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 	// TODO: support Idempotency-Key.
 
@@ -147,7 +152,7 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	address, err := generateAddress()
+	address, err := generateBTCAddress()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
