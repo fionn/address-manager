@@ -59,6 +59,13 @@ func randomBytes(size int) ([]byte, error) {
 	return b, nil
 }
 
+// Append a byte-decoded newline to a bytearray.
+// This helper function exists only to add a descriptive name to this common
+// operation.
+func binaryNewline(s []byte) []byte {
+	return append(s, []byte{10}...)
+}
+
 // Generate a random Bech32 address.
 func generateAddress() (string, error) {
 	// Because we're not using a real keypair, this is just fed into some hash
@@ -117,9 +124,7 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Appened a newline.
-	addresses = append(addresses, []byte{10}...)
-	w.Write(addresses)
+	w.Write(binaryNewline(addresses))
 }
 
 // Handler to create a new vault wallet.
@@ -156,7 +161,7 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(append(response, []byte{10}...))
+	w.Write(binaryNewline(response))
 }
 
 func main() {
