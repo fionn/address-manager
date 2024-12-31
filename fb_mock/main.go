@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"log"
+	mrand "math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcutil/bech32"
@@ -158,7 +160,9 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := "1" // TODO: random integer?
+	// Seems we can get away with this as we don't need to keep track
+	id := strconv.Itoa(mrand.Int())
+
 	fbVaultWallet := FBVaultWallet{ID: id, Address: address}
 	response, err := json.MarshalIndent(fbVaultWallet, "", "  ")
 	if err != nil {
