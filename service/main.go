@@ -9,10 +9,11 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/fionn/address-manager/service/fb"
+	fbService "github.com/fionn/address-manager/service/fb"
 )
 
 const databaseFile = "test.db"
+const FBBaseURL = "http://localhost:6200"
 
 type Wallet struct {
 	// This is very lossy and we're probably better off keeping the general
@@ -29,7 +30,7 @@ type User struct {
 	Wallet   Wallet
 }
 
-func newWallet() (*Wallet, error) {
+func newWallet(fb *fbService.Fireblocks) (*Wallet, error) {
 	fbVaultAccount, err := fb.CreateVaultAccount()
 	if err != nil {
 		return nil, err
@@ -47,7 +48,7 @@ func newWallet() (*Wallet, error) {
 }
 
 // Keep the wallet pool polulated.
-func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int) {
+func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb *fbService.Fireblocks) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -56,7 +57,7 @@ func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int) {
 			return
 		default:
 			for len(c) < threshold {
-				wallet, _ := newWallet()
+				wallet, _ := newWallet(fb)
 				c <- *wallet
 			}
 		}
@@ -72,6 +73,8 @@ func main() {
 		log.Fatalf("Failed to connect to the database: %s", err)
 	}
 
+	fb := fbService.NewFireblocksSession(FBBaseURL)
+
 	db.AutoMigrate(&User{})
 
 	threshold := 30
@@ -82,7 +85,7 @@ func main() {
 	// TODO: check persistent storage for unallocated wallets and add them to
 	// the pool first.
 
-	go populateWalletPool(walletChannel, ctx, threshold)
+	go populateWalletPool(walletChannel, ctx, threshold, &fb)
 
 	// We don't use a WaitGroup because we don't actually want to wait, just let
 	// the goroutine run until the process terminates to keep the pool

@@ -6,11 +6,6 @@ import (
 	"net/http"
 )
 
-// TODO: get rid of this, it's the caller's responsibility to declare the URL.
-// We hardcode it here as a temporary solution, since really we should have a
-// Fireblocks session and the below functions would be methods on it.
-const FBBaseURL = "http://localhost:6200"
-
 // TODO: fix this un-DRY situation, where we've got these structs defined
 // twice.
 
@@ -51,8 +46,20 @@ type VaultWallet struct {
 	ActivationTxId    string `json:"activationTxId,omitempty"`
 }
 
-func CreateVaultAccount() (*VaultAccount, error) {
-	createAccountURL := FBBaseURL + "/v1/vault/accounts"
+type Fireblocks struct {
+	baseURL     string
+	credentials any // Placeholder.
+}
+
+// Placeholder for Fireblocks session constructor. We'll need this to pass
+// credentials through, but currently aren't concerned with that, this is just
+// so we get the general shape right.
+func NewFireblocksSession(baseURL string) Fireblocks {
+	return Fireblocks{baseURL: baseURL}
+}
+
+func (fb *Fireblocks) CreateVaultAccount() (*VaultAccount, error) {
+	createAccountURL := fb.baseURL + "/v1/vault/accounts"
 	request, err := http.NewRequest(http.MethodPost, createAccountURL, nil)
 	if err != nil {
 		return nil, err
@@ -72,8 +79,8 @@ func CreateVaultAccount() (*VaultAccount, error) {
 	return &fbVaultAccount, nil
 }
 
-func CreateVaultAccountAsset(accountId, assetId string) (*VaultWallet, error) {
-	createAssetURL := fmt.Sprintf("%s/v1/vault/accounts/%s/%s", FBBaseURL, accountId, assetId)
+func (fb *Fireblocks) CreateVaultAccountAsset(accountId, assetId string) (*VaultWallet, error) {
+	createAssetURL := fmt.Sprintf("%s/v1/vault/accounts/%s/%s", fb.baseURL, accountId, assetId)
 	request, err := http.NewRequest(http.MethodPost, createAssetURL, nil)
 	if err != nil {
 		return nil, err
