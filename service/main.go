@@ -9,7 +9,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	fbService "github.com/fionn/address-manager/service/fb"
+	"github.com/fionn/address-manager/service/fireblocks"
 )
 
 const databaseFile = "test.db"
@@ -30,7 +30,7 @@ type User struct {
 	Wallet   Wallet
 }
 
-func newWallet(fb *fbService.Fireblocks) (*Wallet, error) {
+func newWallet(fb *fireblocks.Fireblocks) (*Wallet, error) {
 	fbVaultAccount, err := fb.CreateVaultAccount()
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func newWallet(fb *fbService.Fireblocks) (*Wallet, error) {
 }
 
 // Keep the wallet pool polulated.
-func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb *fbService.Fireblocks) {
+func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb *fireblocks.Fireblocks) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -73,7 +73,7 @@ func main() {
 		log.Fatalf("Failed to connect to the database: %s", err)
 	}
 
-	fb := fbService.NewFireblocksSession(FBBaseURL)
+	fb := fireblocks.NewFireblocksSession(FBBaseURL)
 
 	db.AutoMigrate(&User{})
 
