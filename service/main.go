@@ -13,7 +13,7 @@ import (
 )
 
 const databaseFile = "test.db"
-const FBBaseURL = "http://localhost:6200"
+const fbBaseURL = "http://localhost:6200"
 
 type Wallet struct {
 	// This is very lossy and we're probably better off keeping the general
@@ -78,7 +78,7 @@ func main() {
 		log.Fatalf("Failed to connect to the database: %s", err)
 	}
 
-	fb := fireblocks.NewFireblocksSession(FBBaseURL)
+	fb := fireblocks.NewFireblocksSession(fbBaseURL)
 
 	err = db.AutoMigrate(&User{}, &Wallet{})
 	if err != nil {
