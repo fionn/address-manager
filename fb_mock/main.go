@@ -13,65 +13,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	fb "github.com/fionn/address-manager/service/fireblocks"
 )
-
-// Fireblocks address object, embedded in FBAddresses.
-type FBAddress struct {
-	AssetId           string `json:"assetId"`
-	Address           string `json:"address"`
-	Description       string `json:"description"`
-	Tag               string `json:"tag"`
-	Type              string `json:"type"`
-	CustomerRefId     string `json:"customerRefId"`
-	AddressFormat     string `json:"addressFormat"`
-	LegacyAddress     string `json:"legacyAddress"`
-	EnterpriseAddress string `json:"enterpriseAddress"`
-	Bip44AddressIndex int    `json:"bip44AddressIndex"`
-	UserDefined       bool   `json:"userDefined"`
-}
-
-// Wallet object returned from
-// https://developers.fireblocks.com/reference/createvaultaccountasset.
-type FBVaultWallet struct {
-	ID                string `json:"id"`
-	Address           string `json:"address"`
-	LegacyAddress     string `json:"legacyAddress,omitempty"`
-	EnterpriseAddress string `json:"enterpriseAddress,omitempty"`
-	Tag               string `json:"tag,omitempty"`
-	EosAccountName    string `json:"eosAccountName,omitempty"`
-	Status            string `json:"status,omitempty"` // TODO: use an enum.
-	ActivationTxId    string `json:"activationTxId,omitempty"`
-}
-
-// Fireblocks vault asset, embedded in FBVaultAccount
-type FBVaultAsset struct {
-	ID            string `json:"id"`
-	Total         string `json:"total"`
-	Available     string `json:"available"`
-	Pending       string `json:"pending"`
-	Frozen        string `json:"frozen"`
-	LockedAmmount string `json:"lockedAmount"`
-	BlockHeight   string `json:"blockHeight"`
-	BlockHash     string `json:"blockHash"`
-	// RewardsInfo struct TODO
-}
-
-// Fireblocks Vault, see
-// https://developers.fireblocks.com/reference/createvaultaccount.
-type FBVaultAccount struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Assets        []FBVaultAsset `json:"assets"`
-	HiddenOnUI    bool           `json:"hiddenOnUI"`
-	CustomerRefId string         `json:"customerRefId"`
-	AutoFuel      string         `json:"autoFuel"`
-}
-
-// Fireblocks addresses object, wrapping an array of address objects.
-// See https://developers.fireblocks.com/reference/getvaultaccountassetaddressespaginated.
-type FBAddresses struct {
-	Addresses []FBAddress `json:"addresses"`
-}
 
 // Fireblocks error response.
 type FBError struct {
@@ -143,8 +87,8 @@ func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
 
 	// This isn't documented, but from the example response it seems to default
 	// to creating a single ETH wallet.
-	asset := FBVaultAsset{ID: "ETH"}
-	fbVaultAccount := FBVaultAccount{ID: strconv.Itoa(mrand.Int()), Assets: []FBVaultAsset{asset}}
+	asset := fb.VaultAsset{ID: "ETH"}
+	fbVaultAccount := fb.VaultAccount{ID: strconv.Itoa(mrand.Int()), Assets: []fb.VaultAsset{asset}}
 
 	response, err := json.MarshalIndent(fbVaultAccount, "", "  ")
 	if err != nil {
@@ -177,8 +121,8 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fbAddress := FBAddress{AssetId: assetId, Address: address}
-	addresses, err := json.MarshalIndent(FBAddresses{[]FBAddress{fbAddress}}, "", "  ")
+	fbAddress := fb.Address{AssetId: assetId, Address: address}
+	addresses, err := json.MarshalIndent(fb.Addresses{Addresses: []fb.Address{fbAddress}}, "", "  ")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
@@ -217,7 +161,7 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 	// Seems we can get away with this as we don't need to keep track
 	id := strconv.Itoa(mrand.Int())
 
-	fbVaultWallet := FBVaultWallet{ID: id, Address: address}
+	fbVaultWallet := fb.VaultWallet{ID: id, Address: address}
 	response, err := json.MarshalIndent(fbVaultWallet, "", "  ")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)

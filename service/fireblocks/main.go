@@ -1,4 +1,4 @@
-package fb
+package fireblocks
 
 import (
 	"encoding/json"
@@ -6,8 +6,28 @@ import (
 	"net/http"
 )
 
-// TODO: fix this un-DRY situation, where we've got these structs defined
-// twice.
+// Fireblocks address object, embedded in FBAddresses.
+// Only used in mocks
+type Address struct {
+	AssetId           string `json:"assetId"`
+	Address           string `json:"address"`
+	Description       string `json:"description"`
+	Tag               string `json:"tag"`
+	Type              string `json:"type"`
+	CustomerRefId     string `json:"customerRefId"`
+	AddressFormat     string `json:"addressFormat"`
+	LegacyAddress     string `json:"legacyAddress"`
+	EnterpriseAddress string `json:"enterpriseAddress"`
+	Bip44AddressIndex int    `json:"bip44AddressIndex"`
+	UserDefined       bool   `json:"userDefined"`
+}
+
+// Fireblocks addresses object, wrapping an array of address objects.
+// See https://developers.fireblocks.com/reference/getvaultaccountassetaddressespaginated.
+// Only used in mocks.
+type Addresses struct {
+	Addresses []Address `json:"addresses"`
+}
 
 // Fireblocks vault asset, embedded in FBVaultAccount
 type VaultAsset struct {
