@@ -75,7 +75,10 @@ func main() {
 
 	fb := fireblocks.NewFireblocksSession(FBBaseURL)
 
-	db.AutoMigrate(&User{})
+	err = db.AutoMigrate(&User{}, &Wallet{})
+	if err != nil {
+		log.Fatalf("Failed to automigrate: %s", err)
+	}
 
 	threshold := 30
 	walletChannel := make(chan Wallet, threshold)
@@ -86,10 +89,6 @@ func main() {
 	// the pool first.
 
 	go populateWalletPool(walletChannel, ctx, threshold, &fb)
-
-	// We don't use a WaitGroup because we don't actually want to wait, just let
-	// the goroutine run until the process terminates to keep the pool
-	// topped-up.
 
 	user := User{}
 	db.Create(&user)
