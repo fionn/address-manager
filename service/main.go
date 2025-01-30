@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
@@ -23,12 +24,21 @@ type Wallet struct {
 	// schema.
 	gorm.Model
 	AddressBTC string
+	UserID     uuid.UUID
 }
 
 type User struct {
-	gorm.Model
-	WalletID uint
-	Wallet   Wallet
+	ID        uuid.UUID `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+	Wallet    Wallet
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) error {
+	uuid := uuid.New()
+	tx.Statement.SetColumn("ID", uuid)
+	return nil
 }
 
 // Create a wallet.
@@ -70,6 +80,22 @@ func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb 
 	}
 }
 
+func createUser(db *gorm.DB, c <-chan Wallet) (*User, error) {
+	user := User{Wallet: <-c}
+	if tx := db.Create(&user); tx.Error != nil {
+		return nil, tx.Error
+	}
+	return &user, nil
+}
+
+func getUser(db *gorm.DB, id uuid.UUID) (*User, error) {
+	user := User{}
+	if tx := db.Model(&user).Preload("Wallet").Take(&user, id); tx.Error != nil {
+		return nil, tx.Error
+	}
+	return &user, nil
+}
+
 // This entry point exists for testing. We remove the on-disk database file if
 // it exists and create a new one, then add some example data.
 func main() {
@@ -94,8 +120,17 @@ func main() {
 	defer cancelWalletPool()
 	go populateWalletPool(walletChannel, ctx, threshold, &fb)
 
-	user := User{}
-	db.Create(&user)
-	db.Model(&user).Update("Wallet", <-walletChannel)
+	user, err := createUser(db, walletChannel)
+	if err != nil {
+		log.Fatalf("Failed to create user: %s", err)
+	}
+
+	fmt.Printf("%+v\n", user)
+
+	user, err = getUser(db, user.ID)
+	if err != nil {
+		log.Fatalf("Failed to get user: %s", err)
+	}
+
 	fmt.Printf("%+v\n", user)
 }
