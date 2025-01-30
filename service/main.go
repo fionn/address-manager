@@ -32,8 +32,6 @@ type User struct {
 }
 
 // Create a wallet.
-// TODO: create the wallet persistently (i.e. don't just instantiate the object
-// but write it to the database too).
 func newWallet(fb *fireblocks.Fireblocks) (*Wallet, error) {
 	fbVaultAccount, err := fb.CreateVaultAccount()
 	if err != nil {
@@ -56,9 +54,6 @@ func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb 
 	for {
 		select {
 		case <-ctx.Done():
-			// TODO: reconsider providing cancellation as it shouldn't be
-			// necessary if all wallets are committed to the database on
-			// creation.
 			log.Println("Received cancellation")
 			return
 		default:
@@ -91,21 +86,16 @@ func main() {
 		log.Fatalf("Failed to automigrate: %s", err)
 	}
 
-	// TODO: check persistent storage for unallocated wallets and add them to
-	// the pool first.
-
 	threshold := 30
 	walletChannel := make(chan Wallet, threshold)
 	defer close(walletChannel)
+
 	ctx, cancelWalletPool := context.WithCancel(context.Background())
+	defer cancelWalletPool()
 	go populateWalletPool(walletChannel, ctx, threshold, &fb)
 
 	user := User{}
 	db.Create(&user)
 	db.Model(&user).Update("Wallet", <-walletChannel)
 	fmt.Printf("%+v\n", user)
-
-	// TODO: catch signal and try to exit gracefully.
-	cancelWalletPool()
-	// TODO: wait for cancellation to complete.
 }
