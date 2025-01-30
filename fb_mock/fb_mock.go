@@ -1,12 +1,15 @@
 package fb_mock
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"log"
 	mrand "math/rand"
 	"net/http"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/btcsuite/btcd/btcutil"
 	"github.com/btcsuite/btcutil/bech32"
@@ -187,16 +190,32 @@ func service() http.Handler {
 	return r
 }
 
-// Spin up webserver and serve at address forever.
-func RunWithAddress(address string) {
-	// TODO: consider having this be context-aware and support cancellation.
+// Spin up the server and serve until context receives cancellation.
+func RunWithCancellation(ctx context.Context, wg *sync.WaitGroup, address string) {
 	server := &http.Server{Addr: address, Handler: service()}
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Print("Cancelling mock server")
+			if err := server.Shutdown(ctx); err != nil {
+				log.Print(err)
+			}
+			wg.Done()
+			return
+		default:
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
 }
 
-// Spin up webserver and serve forever.
+// Spin up the server and serve forever.
 func Run() {
 	r := service()
 	address := "localhost:6200"

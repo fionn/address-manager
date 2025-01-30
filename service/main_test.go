@@ -3,7 +3,9 @@ package main_test
 import (
 	"context"
 	"os"
+	"sync"
 	"testing"
+	"time"
 
 	m "github.com/fionn/address-manager/service"
 	"github.com/fionn/address-manager/service/fireblocks"
@@ -32,14 +34,54 @@ func setupDatabase() (*gorm.DB, error) {
 	return db, nil
 }
 
+func setupMock(address string) (*sync.WaitGroup, context.CancelFunc) {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	ctx, stopMock := context.WithCancel(context.Background())
+	go fb_mock.RunWithCancellation(ctx, wg, address)
+	return wg, stopMock
+}
+
+func TestPopulateWalletPool(t *testing.T) {
+	wg, stopMock := setupMock(fbBaseHost)
+	defer wg.Wait()
+	defer stopMock()
+
+	fb := fireblocks.NewFireblocksSession(fbBaseURL)
+	threshold := 1
+
+	walletChannel := make(chan m.Wallet, threshold)
+	defer close(walletChannel)
+
+	ctx, cancelWalletPool := context.WithCancel(context.Background())
+	defer cancelWalletPool()
+
+	go m.PopulateWalletPool(walletChannel, ctx, threshold, &fb)
+	wallet := <-walletChannel
+
+	if wallet.AddressBTC == "" {
+		t.Error("Got zero-valued BTC address")
+	}
+
+	// Unpleasant. We must wait for the channel to repopulate, but we don't
+	// have a need for this in the actual code so don't implement a wait group
+	// or anything else that we could use here.
+	time.Sleep(time.Second)
+	if len(walletChannel) != threshold {
+		t.Errorf("walletChannel not at threshold")
+	}
+}
+
 func TestCreateUser(t *testing.T) {
 	db, err := setupDatabase()
+	defer os.Remove(databaseFile)
 	if err != nil {
 		t.Fatalf("Error instantiating the database: %s", err)
 	}
-	defer os.Remove(databaseFile)
 
-	go fb_mock.RunWithAddress(fbBaseHost)
+	wg, stopMock := setupMock(fbBaseHost)
+	defer wg.Wait()
+	defer stopMock()
 
 	fb := fireblocks.NewFireblocksSession(fbBaseURL)
 
