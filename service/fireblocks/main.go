@@ -7,7 +7,7 @@ import (
 )
 
 // Fireblocks address object, embedded in FBAddresses.
-// Only used in mocks
+// Only used in mocks.
 type Address struct {
 	AssetId           string `json:"assetId"`
 	Address           string `json:"address"`
@@ -29,7 +29,7 @@ type Addresses struct {
 	Addresses []Address `json:"addresses"`
 }
 
-// Fireblocks vault asset, embedded in FBVaultAccount
+// Fireblocks vault asset, embedded in FBVaultAccount.
 type VaultAsset struct {
 	ID            string `json:"id"`
 	Total         string `json:"total"`

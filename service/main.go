@@ -49,7 +49,7 @@ func newWallet(fb *fireblocks.Fireblocks) (*Wallet, error) {
 	return &Wallet{AddressBTC: fbVaultWallet.Address}, nil
 }
 
-// Keep the wallet pool polulated.
+// Keep the wallet pool populated.
 func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb *fireblocks.Fireblocks) {
 	for {
 		select {

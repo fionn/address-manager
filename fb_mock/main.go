@@ -78,7 +78,7 @@ func writeError(w http.ResponseWriter, httpErrorCode int, message string, apiErr
 func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
 	// TODO: support Idempotency-Key.
 
-	// The documentation on this endpoint is unclear, but the example requuest
+	// The documentation on this endpoint is unclear, but the example request
 	// only sends two fields, both of which are explicitly optional, so we infer
 	// that all fields are optional which, for our purposes, means we can ignore
 	// them.
@@ -160,7 +160,8 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Seems we can get away with this as we don't need to keep track
+	// Seems we can get away with this as we don't need to keep track of wallet
+	// IDs.
 	id := strconv.Itoa(mrand.Int())
 
 	fbVaultWallet := fb.VaultWallet{ID: id, Address: address}
