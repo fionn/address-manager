@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -62,7 +63,12 @@ func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb 
 			return
 		default:
 			for len(c) < threshold {
-				wallet, _ := newWallet(fb)
+				wallet, err := newWallet(fb)
+				if err != nil {
+					log.Printf("Failed to create wallet: %s\n", err)
+					time.Sleep(1 * time.Second) // TODO: exponential backoff with cap.
+					continue
+				}
 				c <- *wallet
 			}
 		}
