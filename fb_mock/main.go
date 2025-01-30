@@ -46,20 +46,20 @@ func generateBTCAddress() (string, error) {
 	// random bytes.
 	fakePubKey, err := randomBytes(20)
 	if err != nil {
-		log.Print("Failed to generate random bytes")
+		log.Printf("Failed to generate random bytes: %s", err)
 		return "", err
 	}
 
 	hashedPubKey := btcutil.Hash160(fakePubKey)
 	witnessProgram, err := bech32.ConvertBits(hashedPubKey, 8, 5, true)
 	if err != nil {
-		log.Print("Failed to squash 8-bit array to 5-bit array")
+		log.Printf("Failed to squash 8-bit array to 5-bit array: %s", err)
 		return "", err
 	}
 
 	address, err := bech32.Encode("tb", append([]byte{0}, witnessProgram...))
 	if err != nil {
-		log.Print("Failed to encode Bech32 address")
+		log.Printf("Failed to encode Bech32 address: %s", err)
 		return "", err
 	}
 
@@ -97,9 +97,8 @@ func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = w.Write(binaryNewline(response))
-	// TODO: log errors in other handlers too.
 	if err != nil {
-		log.Print("Error writing response")
+		log.Printf("Error writing response: %s", err)
 	}
 }
 
@@ -128,7 +127,10 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(binaryNewline(addresses))
+	_, err = w.Write(binaryNewline(addresses))
+	if err != nil {
+		log.Printf("Error writing response: %s", err)
+	}
 }
 
 // Handler to create a new vault wallet.
@@ -168,7 +170,10 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write(binaryNewline(response))
+	_, err = w.Write(binaryNewline(response))
+	if err != nil {
+		log.Printf("Error writing response: %s", err)
+	}
 }
 
 func main() {
