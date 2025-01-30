@@ -1,6 +1,6 @@
 module github.com/fionn/address-manager/fb_mock
 
-go 1.23.4
+go 1.23.5
 
 require (
 	github.com/btcsuite/btcd/btcutil v1.1.6
@@ -14,8 +14,8 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/crypto v0.32.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
 )
 
 replace github.com/fionn/address-manager/service => ../service
