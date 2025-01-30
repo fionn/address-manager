@@ -14,7 +14,7 @@ import (
 	"github.com/fionn/address-manager/service/fireblocks"
 )
 
-const databaseFile = "test.db"
+const databaseFile = "adhoc.db"
 const fbBaseURL = "http://localhost:6200"
 
 type Wallet struct {
@@ -60,11 +60,11 @@ func newWallet(fb *fireblocks.Fireblocks) (*Wallet, error) {
 }
 
 // Keep the wallet pool populated.
-func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb *fireblocks.Fireblocks) {
+func PopulateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb *fireblocks.Fireblocks) {
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Received cancellation")
+			log.Println("Cancelling wallet pool population")
 			return
 		default:
 			for len(c) < threshold {
@@ -80,7 +80,7 @@ func populateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb 
 	}
 }
 
-func createUser(db *gorm.DB, c <-chan Wallet) (*User, error) {
+func CreateUser(db *gorm.DB, c <-chan Wallet) (*User, error) {
 	user := User{Wallet: <-c}
 	if tx := db.Create(&user); tx.Error != nil {
 		return nil, tx.Error
@@ -88,7 +88,7 @@ func createUser(db *gorm.DB, c <-chan Wallet) (*User, error) {
 	return &user, nil
 }
 
-func getUser(db *gorm.DB, id uuid.UUID) (*User, error) {
+func GetUser(db *gorm.DB, id uuid.UUID) (*User, error) {
 	user := User{}
 	if tx := db.Model(&user).Preload("Wallet").Take(&user, id); tx.Error != nil {
 		return nil, tx.Error
@@ -118,16 +118,16 @@ func main() {
 
 	ctx, cancelWalletPool := context.WithCancel(context.Background())
 	defer cancelWalletPool()
-	go populateWalletPool(walletChannel, ctx, threshold, &fb)
+	go PopulateWalletPool(walletChannel, ctx, threshold, &fb)
 
-	user, err := createUser(db, walletChannel)
+	user, err := CreateUser(db, walletChannel)
 	if err != nil {
 		log.Fatalf("Failed to create user: %s", err)
 	}
 
 	fmt.Printf("%+v\n", user)
 
-	user, err = getUser(db, user.ID)
+	user, err = GetUser(db, user.ID)
 	if err != nil {
 		log.Fatalf("Failed to get user: %s", err)
 	}

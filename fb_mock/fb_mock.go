@@ -1,4 +1,4 @@
-package main
+package fb_mock
 
 import (
 	"crypto/rand"
@@ -177,15 +177,31 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func main() {
+func service() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Get("/v1/vault/accounts/{vaultAccountId}/{assetId}/addresses_paginate", handleGetAddresses)
 	r.Post("/v1/vault/accounts/{vaultAccountId}/{assetId}", handlePostCreateVaultAccountAsset)
 	r.Post("/v1/vault/accounts", handlePostCreateVaultAccount)
+	return r
+}
 
+// Spin up webserver and serve at address forever.
+func RunWithAddress(address string) {
+	// TODO: consider having this be context-aware and support cancellation.
+	server := &http.Server{Addr: address, Handler: service()}
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+}
+
+// Spin up webserver and serve forever.
+func Run() {
+	r := service()
 	address := "localhost:6200"
 	log.Printf("listening on http://%s/", address)
-	log.Fatal(http.ListenAndServe(address, r))
+	if err := http.ListenAndServe(address, r); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
