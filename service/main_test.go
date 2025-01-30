@@ -93,12 +93,14 @@ func TestCreateUser(t *testing.T) {
 	defer cancelWalletPool()
 	go m.PopulateWalletPool(walletChannel, ctx, threshold, &fb)
 
-	user, err := m.CreateUser(db, walletChannel)
+	data := m.Data{DB: db, Wallets: walletChannel}
+
+	user, err := data.CreateUser()
 	if err != nil {
 		t.Fatalf("Failed to create user: %s", err)
 	}
 
-	user_prime, err := m.GetUser(db, user.ID)
+	user_prime, err := data.GetUser(user.ID)
 	if err != nil {
 		t.Fatalf("Failed to get user: %s", err)
 	}

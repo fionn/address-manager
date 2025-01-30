@@ -2,11 +2,14 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -16,6 +19,11 @@ import (
 
 const databaseFile = "adhoc.db"
 const fbBaseURL = "http://localhost:6200"
+
+type Data struct {
+	DB      *gorm.DB
+	Wallets <-chan Wallet
+}
 
 type Wallet struct {
 	// This is very lossy and we're probably better off keeping the general
@@ -80,27 +88,77 @@ func PopulateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb 
 	}
 }
 
-func CreateUser(db *gorm.DB, c <-chan Wallet) (*User, error) {
-	user := User{Wallet: <-c}
-	if tx := db.Create(&user); tx.Error != nil {
+func (d *Data) CreateUser() (*User, error) {
+	user := User{Wallet: <-d.Wallets}
+	if tx := d.DB.Create(&user); tx.Error != nil {
 		return nil, tx.Error
 	}
 	return &user, nil
 }
 
-func GetUser(db *gorm.DB, id uuid.UUID) (*User, error) {
+func (d Data) GetUser(id uuid.UUID) (*User, error) {
 	user := User{}
-	if tx := db.Model(&user).Preload("Wallet").Take(&user, id); tx.Error != nil {
+	if tx := d.DB.Model(&user).Preload("Wallet").Take(&user, id); tx.Error != nil {
 		return nil, tx.Error
 	}
 	return &user, nil
 }
 
-// This entry point exists for testing. We remove the on-disk database file if
-// it exists and create a new one, then add some example data.
+// Helper to write error messages as HTTP responses.
+func writeError(w http.ResponseWriter, httpErrorCode int, message string) {
+	w.WriteHeader(httpErrorCode)
+	w.Write([]byte(message))
+}
+
+func (d *Data) handlePostCreateUser(w http.ResponseWriter, _ *http.Request) {
+	user, err := d.CreateUser()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response, err := json.MarshalIndent(user, "", "  ")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	_, err = w.Write(response)
+	if err != nil {
+		log.Printf("Error writing response: %s", err)
+	}
+}
+
+func (d Data) handleGetUser(w http.ResponseWriter, r *http.Request) {
+	userId, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	user, err := d.GetUser(userId)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	response, err := json.MarshalIndent(user, "", "  ")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	_, err = w.Write(response)
+	if err != nil {
+		log.Printf("Error writing response: %s", err)
+	}
+}
+
+// Entry point (still for testing).
 func main() {
 	os.Remove(databaseFile)
 	db, err := gorm.Open(sqlite.Open(databaseFile), &gorm.Config{})
+	defer os.Remove(databaseFile)
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %s", err)
 	}
@@ -120,17 +178,17 @@ func main() {
 	defer cancelWalletPool()
 	go PopulateWalletPool(walletChannel, ctx, threshold, &fb)
 
-	user, err := CreateUser(db, walletChannel)
-	if err != nil {
-		log.Fatalf("Failed to create user: %s", err)
+	data := Data{DB: db, Wallets: walletChannel}
+
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Get("/user/{userId}", data.handleGetUser)
+	r.Post("/user", data.handlePostCreateUser)
+
+	address := "localhost:6201"
+	log.Printf("listening on http://%s/", address)
+	if err := http.ListenAndServe(address, r); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
 	}
-
-	fmt.Printf("%+v\n", user)
-
-	user, err = GetUser(db, user.ID)
-	if err != nil {
-		log.Fatalf("Failed to get user: %s", err)
-	}
-
-	fmt.Printf("%+v\n", user)
 }
