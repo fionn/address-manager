@@ -2,8 +2,8 @@ package fireblocks
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // Fireblocks address object, embedded in FBAddresses.
@@ -67,7 +67,7 @@ type VaultWallet struct {
 }
 
 type Fireblocks struct {
-	baseURL     string
+	baseURL     url.URL
 	credentials any // Placeholder.
 }
 
@@ -75,11 +75,12 @@ type Fireblocks struct {
 // credentials through, but currently aren't concerned with that, this is just
 // so we get the general shape right.
 func NewFireblocksSession(baseURL string) Fireblocks {
-	return Fireblocks{baseURL: baseURL}
+	fbURL, _ := url.Parse(baseURL)
+	return Fireblocks{baseURL: *fbURL}
 }
 
 func (fb *Fireblocks) CreateVaultAccount() (*VaultAccount, error) {
-	createAccountURL := fb.baseURL + "/v1/vault/accounts"
+	createAccountURL, _ := url.JoinPath(fb.baseURL.String(), "/v1/vault/accounts")
 	request, err := http.NewRequest(http.MethodPost, createAccountURL, nil)
 	if err != nil {
 		return nil, err
@@ -100,7 +101,7 @@ func (fb *Fireblocks) CreateVaultAccount() (*VaultAccount, error) {
 }
 
 func (fb *Fireblocks) CreateVaultAccountAsset(accountId, assetId string) (*VaultWallet, error) {
-	createAssetURL := fmt.Sprintf("%s/v1/vault/accounts/%s/%s", fb.baseURL, accountId, assetId)
+	createAssetURL, _ := url.JoinPath(fb.baseURL.String(), "/v1/vault/accounts/", accountId, assetId)
 	request, err := http.NewRequest(http.MethodPost, createAssetURL, nil)
 	if err != nil {
 		return nil, err
