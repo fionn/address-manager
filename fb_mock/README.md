@@ -4,7 +4,10 @@
 
 This mocks the Fireblocks API. The supported endpoints are:
 
-* [`/v1/vault/accounts/{vaultAccountId}/{assetId}/addresses_paginated`](https://developers.fireblocks.com/reference/getvaultaccountassetaddressespaginated).
+* [GET `/v1/vault/accounts/{vaultAccountId}/{assetId}/addresses_paginated`](https://developers.fireblocks.com/reference/getvaultaccountassetaddressespaginated),
+* [POST `v1/vault/accounts`](https://developers.fireblocks.com/reference/createvaultaccount),
+* [POST `v1/vault/accounts/{vaultAccountId}/{assetId}`](https://developers.fireblocks.com/reference/createvaultaccountasset).
+
 
 ## Usage
 
