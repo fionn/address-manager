@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"context"
@@ -154,8 +154,7 @@ func (d Data) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Entry point (still for testing).
-func main() {
+func Run() {
 	os.Remove(databaseFile)
 	db, err := gorm.Open(sqlite.Open(databaseFile), &gorm.Config{})
 	defer os.Remove(databaseFile)

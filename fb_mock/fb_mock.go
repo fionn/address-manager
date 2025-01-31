@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	fb "github.com/fionn/address-manager/service/fireblocks"
+	"github.com/fionn/address-manager/utils"
 )
 
 // Fireblocks error response.
@@ -33,13 +34,6 @@ func randomBytes(size int) ([]byte, error) {
 		return []byte{}, err
 	}
 	return b, nil
-}
-
-// Append a byte-decoded newline to a bytearray.
-// This helper function exists only to add a descriptive name to this common
-// operation.
-func binaryNewline(s []byte) []byte {
-	return append(s, []byte{10}...)
 }
 
 // Generate a random Bech32 address.
@@ -99,7 +93,7 @@ func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = w.Write(binaryNewline(response))
+	_, err = w.Write(utils.BinaryNewline(response))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
 	}
@@ -130,7 +124,7 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = w.Write(binaryNewline(addresses))
+	_, err = w.Write(utils.BinaryNewline(addresses))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
 	}
@@ -174,7 +168,7 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = w.Write(binaryNewline(response))
+	_, err = w.Write(utils.BinaryNewline(response))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
 	}

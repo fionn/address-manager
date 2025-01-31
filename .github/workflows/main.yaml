@@ -7,14 +7,10 @@ permissions:
 
 jobs:
 
-  build_service:
+  build:
 
-    name: Build Service
+    name: Build
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: service
 
     steps:
 
@@ -27,41 +23,15 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 1.23
-          cache-dependency-path: service/go.sum
 
       - name: Download dependencies
         run: go mod download
 
-      - name: Build
-        run: go build -v
+      - name: Build service
+        run: make bin/service
 
-  build_fb_mock:
-
-    name: Build Mock
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: fb_mock
-
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: 1.23
-          cache-dependency-path: fb_mock/go.sum
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Build
-        run: go build -v cmd/main.go
+      - name: Build mock
+        run: make bin/fb_mock
 
   test:
 
@@ -83,7 +53,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 1.23
-          cache-dependency-path: service/go.sum
 
       - name: Download dependencies
         run: go mod download
