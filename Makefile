@@ -5,3 +5,7 @@ bin/fb_mock: $(SRC) go.mod go.sum
 
 bin/service: $(SRC) go.mod go.sum
 	go build -v -o $@ github.com/fionn/address-manager/cmd/$(@F)
+
+.PHONY: test
+test:
+	go test -v ./service

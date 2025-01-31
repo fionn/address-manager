@@ -11,7 +11,7 @@ This mocks the Fireblocks API. The supported endpoints are:
 
 ## Usage
 
-Run `cmd/main.go`, which will launch a webserver and print the address it is listening on.
+Run `go run ../cmd/fb_mock/main.go`, which will launch a webserver and print the address it is listening on.
 
 An example query could be
 ```shell
