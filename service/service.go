@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -169,9 +168,7 @@ func (d Data) handleGetUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func Run() {
-	os.Remove(databaseFile)
 	db, err := gorm.Open(sqlite.Open(databaseFile), &gorm.Config{})
-	defer os.Remove(databaseFile)
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %s", err)
 	}
