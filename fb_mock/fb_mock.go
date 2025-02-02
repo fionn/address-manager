@@ -24,6 +24,8 @@ import (
 	"github.com/fionn/address-manager/utils"
 )
 
+var ErrAssetUnknown = errors.New("unknown asset type")
+
 // Fireblocks error response.
 type FBError struct {
 	APIErrorCode int    `json:"error_code,omitempty"`
@@ -69,14 +71,16 @@ func generateSOLAddress() (string, error) {
 	return base58.Encode(fakePubKey), err
 }
 
-func assetAddressGeneratorMap(assetId string) (func() (string, error), error) {
-	if assetId == "BTC" {
-		return generateBTCAddress, nil
+// Given an asset ID (e.g. "BTC"), return a random address for it.
+func generateAddressForAsset(assetId string) (string, error) {
+	switch assetId {
+	case "BTC":
+		return generateBTCAddress()
+	case "SOL":
+		return generateSOLAddress()
+	default:
+		return "", ErrAssetUnknown
 	}
-	if assetId == "SOL" {
-		return generateSOLAddress, nil
-	}
-	return nil, errors.New("unknown asset type")
 }
 
 // Helper to write error messages as HTTP responses.
@@ -128,15 +132,13 @@ func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
 func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 	assetId := chi.URLParam(r, "assetId")
 
-	addressGenerator, err := assetAddressGeneratorMap(assetId)
+	address, err := generateAddressForAsset(assetId)
 	if err != nil {
-		// See https://developers.fireblocks.com/reference/api-responses#api-error-codes.
-		writeError(w, http.StatusNotFound, "Asset doesn't exist", 1006)
-		return
-	}
-
-	address, err := addressGenerator()
-	if err != nil {
+		if errors.Is(err, ErrAssetUnknown) {
+			// See https://developers.fireblocks.com/reference/api-responses#api-error-codes.
+			writeError(w, http.StatusNotFound, "Asset doesn't exist", 1006)
+			return
+		}
 		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
@@ -171,15 +173,13 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	addressGenerator, err := assetAddressGeneratorMap(assetId)
+	address, err := generateAddressForAsset(assetId)
 	if err != nil {
-		// See https://developers.fireblocks.com/reference/api-responses#api-error-codes.
-		writeError(w, http.StatusNotFound, "Asset doesn't exist", 1006)
-		return
-	}
-
-	address, err := addressGenerator()
-	if err != nil {
+		if errors.Is(err, ErrAssetUnknown) {
+			// See https://developers.fireblocks.com/reference/api-responses#api-error-codes.
+			writeError(w, http.StatusNotFound, "Asset doesn't exist", 1006)
+			return
+		}
 		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
