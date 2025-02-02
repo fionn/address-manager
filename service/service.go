@@ -34,6 +34,7 @@ type Wallet struct {
 	// schema.
 	gorm.Model
 	AddressBTC string
+	AddressSOL string
 	UserID     uuid.UUID
 }
 
@@ -58,15 +59,23 @@ func newWallet(fb *fireblocks.Fireblocks) (*Wallet, error) {
 		return nil, fmt.Errorf("failed to create vault account: %s", err)
 	}
 
-	// By default the above call creates an Ethereum wallet for us, but (at
-	// least for now) we want a Bitcoin one, so we have to create that
-	// separately.
-	fbVaultWallet, err := fb.CreateVaultAccountAsset(fbVaultAccount.ID, "BTC")
+	// By default the above call creates an Ethereum wallet for us, but we want
+	// to support Bitcoin and Solana so we have to create them separately.
+	fbVaultWalletBTC, err := fb.CreateVaultAccountAsset(fbVaultAccount.ID, "BTC")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create asset for account %s: %s", fbVaultAccount.ID, err)
+		return nil, fmt.Errorf("failed to create BTC asset for account %s: %s", fbVaultAccount.ID, err)
+	}
+	fbVaultWalletSOL, err := fb.CreateVaultAccountAsset(fbVaultAccount.ID, "SOL")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SOL asset for account %s: %s", fbVaultAccount.ID, err)
 	}
 
-	return &Wallet{AddressBTC: fbVaultWallet.Address}, nil
+	wallet := Wallet{
+		AddressBTC: fbVaultWalletBTC.Address,
+		AddressSOL: fbVaultWalletSOL.Address,
+	}
+
+	return &wallet, nil
 }
 
 // Keep the wallet pool populated.

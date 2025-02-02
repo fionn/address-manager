@@ -116,4 +116,8 @@ func TestCreateUser(t *testing.T) {
 	if user.Wallet.AddressBTC != user_prime.Wallet.AddressBTC {
 		t.Errorf("Bitcoin addresses %s, %s do not match", user.Wallet.AddressBTC, user_prime.Wallet.AddressBTC)
 	}
+
+	if user.Wallet.AddressSOL != user_prime.Wallet.AddressSOL {
+		t.Errorf("Solana addresses %s, %s do not match", user.Wallet.AddressSOL, user_prime.Wallet.AddressSOL)
+	}
 }

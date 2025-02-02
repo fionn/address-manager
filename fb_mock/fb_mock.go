@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	mrand "math/rand"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/btcutil/bech32"
 
 	"github.com/go-chi/chi/v5"
@@ -59,6 +61,22 @@ func generateBTCAddress() (string, error) {
 	}
 
 	return address, nil
+}
+
+// Generate a random Solana address (32 bytes base-58 encoded).
+func generateSOLAddress() (string, error) {
+	fakePubKey, err := randomBytes(32)
+	return base58.Encode(fakePubKey), err
+}
+
+func assetAddressGeneratorMap(assetId string) (func() (string, error), error) {
+	if assetId == "BTC" {
+		return generateBTCAddress, nil
+	}
+	if assetId == "SOL" {
+		return generateSOLAddress, nil
+	}
+	return nil, errors.New("unknown asset type")
 }
 
 // Helper to write error messages as HTTP responses.
@@ -110,14 +128,14 @@ func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
 func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 	assetId := chi.URLParam(r, "assetId")
 
-	// TODO: support more assets.
-	if assetId != "BTC" {
+	addressGenerator, err := assetAddressGeneratorMap(assetId)
+	if err != nil {
 		// See https://developers.fireblocks.com/reference/api-responses#api-error-codes.
 		writeError(w, http.StatusNotFound, "Asset doesn't exist", 1006)
 		return
 	}
 
-	address, err := generateBTCAddress()
+	address, err := addressGenerator()
 	if err != nil {
 		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
@@ -153,14 +171,14 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: support more assets.
-	if assetId != "BTC" {
+	addressGenerator, err := assetAddressGeneratorMap(assetId)
+	if err != nil {
 		// See https://developers.fireblocks.com/reference/api-responses#api-error-codes.
 		writeError(w, http.StatusNotFound, "Asset doesn't exist", 1006)
 		return
 	}
 
-	address, err := generateBTCAddress()
+	address, err := addressGenerator()
 	if err != nil {
 		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
