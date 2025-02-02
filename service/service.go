@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -53,7 +55,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 func newWallet(fb *fireblocks.Fireblocks) (*Wallet, error) {
 	fbVaultAccount, err := fb.CreateVaultAccount()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create vault account: %s", err)
 	}
 
 	// By default the above call creates an Ethereum wallet for us, but (at
@@ -61,7 +63,7 @@ func newWallet(fb *fireblocks.Fireblocks) (*Wallet, error) {
 	// separately.
 	fbVaultWallet, err := fb.CreateVaultAccountAsset(fbVaultAccount.ID, "BTC")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create asset for account %s: %s", fbVaultAccount.ID, err)
 	}
 
 	return &Wallet{AddressBTC: fbVaultWallet.Address}, nil
@@ -104,25 +106,20 @@ func (d Data) GetUser(id uuid.UUID) (*User, error) {
 	return &user, nil
 }
 
-// Helper to write error messages as HTTP responses.
-func writeError(w http.ResponseWriter, httpErrorCode int, message string) {
-	w.WriteHeader(httpErrorCode)
-	w.Write([]byte(message))
-}
-
 func (d *Data) handlePostCreateUser(w http.ResponseWriter, _ *http.Request) {
 	user, err := d.CreateUser()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	response, err := json.MarshalIndent(user, "", "  ")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(response)
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
@@ -132,22 +129,30 @@ func (d *Data) handlePostCreateUser(w http.ResponseWriter, _ *http.Request) {
 func (d Data) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	userId, err := uuid.Parse(chi.URLParam(r, "userId"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	user, err := d.GetUser(userId)
 	if err != nil {
-		writeError(w, http.StatusNotFound, err.Error())
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			err := fmt.Errorf("failed to get user %s: %s", userId, err)
+			log.Print(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
 	response, err := json.MarshalIndent(user, "", "  ")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		log.Printf("Failed to marshal user %s: %s", user.ID, err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(response)
 	if err != nil {
 		log.Printf("Error writing response: %s", err)

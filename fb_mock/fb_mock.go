@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"log"
 	mrand "math/rand"
 	"net/http"
@@ -43,21 +44,18 @@ func generateBTCAddress() (string, error) {
 	// random bytes.
 	fakePubKey, err := randomBytes(20)
 	if err != nil {
-		log.Printf("Failed to generate random bytes: %s", err)
-		return "", err
+		return "", fmt.Errorf("failed to generate random bytes: %s", err)
 	}
 
 	hashedPubKey := btcutil.Hash160(fakePubKey)
 	witnessProgram, err := bech32.ConvertBits(hashedPubKey, 8, 5, true)
 	if err != nil {
-		log.Printf("Failed to squash 8-bit array to 5-bit array: %s", err)
-		return "", err
+		return "", fmt.Errorf("failed to squash 8-bit array to 5-bit array: %s", err)
 	}
 
 	address, err := bech32.Encode("tb", append([]byte{0}, witnessProgram...))
 	if err != nil {
-		log.Printf("Failed to encode Bech32 address: %s", err)
-		return "", err
+		return "", fmt.Errorf("failed to encode Bech32 address: %s", err)
 	}
 
 	return address, nil
@@ -65,7 +63,13 @@ func generateBTCAddress() (string, error) {
 
 // Helper to write error messages as HTTP responses.
 func writeError(w http.ResponseWriter, httpErrorCode int, message string, apiErrorCode int) {
-	fbError, _ := json.MarshalIndent(FBError{apiErrorCode, message}, "", "  ")
+	fbError, err := json.MarshalIndent(FBError{apiErrorCode, message}, "", "  ")
+	if err != nil {
+		err = fmt.Errorf("failed to marshal error (%d: %s): %s", apiErrorCode, message, err)
+		log.Print(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpErrorCode)
 	w.Write(fbError)
 }
@@ -89,10 +93,12 @@ func handlePostCreateVaultAccount(w http.ResponseWriter, r *http.Request) {
 
 	response, err := json.MarshalIndent(fbVaultAccount, "", "  ")
 	if err != nil {
+		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(utils.BinaryNewline(response))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
@@ -113,6 +119,7 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 
 	address, err := generateBTCAddress()
 	if err != nil {
+		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
 	}
@@ -120,10 +127,12 @@ func handleGetAddresses(w http.ResponseWriter, r *http.Request) {
 	fbAddress := fb.Address{AssetId: assetId, Address: address}
 	addresses, err := json.MarshalIndent(fb.Addresses{Addresses: []fb.Address{fbAddress}}, "", "  ")
 	if err != nil {
+		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(utils.BinaryNewline(addresses))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
@@ -153,6 +162,7 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 
 	address, err := generateBTCAddress()
 	if err != nil {
+		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
 	}
@@ -164,10 +174,12 @@ func handlePostCreateVaultAccountAsset(w http.ResponseWriter, r *http.Request) {
 	fbVaultWallet := fb.VaultWallet{ID: id, Address: address}
 	response, err := json.MarshalIndent(fbVaultWallet, "", "  ")
 	if err != nil {
+		log.Print(err)
 		writeError(w, http.StatusInternalServerError, err.Error(), 0)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(utils.BinaryNewline(response))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
