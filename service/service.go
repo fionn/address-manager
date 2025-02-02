@@ -16,6 +16,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/fionn/address-manager/service/fireblocks"
+	"github.com/fionn/address-manager/utils"
 )
 
 const databaseFile = "adhoc.db"
@@ -128,7 +129,7 @@ func (d *Data) handlePostCreateUser(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(response)
+	_, err = w.Write(utils.BinaryNewline(response))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
 	}
@@ -161,7 +162,7 @@ func (d Data) handleGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_, err = w.Write(response)
+	_, err = w.Write(utils.BinaryNewline(response))
 	if err != nil {
 		log.Printf("Error writing response: %s", err)
 	}
