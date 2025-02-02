@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	m "github.com/fionn/address-manager/service"
+	"github.com/fionn/address-manager/service"
 	"github.com/fionn/address-manager/service/fireblocks"
 
 	"github.com/fionn/address-manager/fb_mock"
@@ -27,7 +27,7 @@ func setupDatabase() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	err = db.AutoMigrate(&m.User{}, &m.Wallet{})
+	err = db.AutoMigrate(&service.User{}, &service.Wallet{})
 	if err != nil {
 		return nil, err
 	}
@@ -50,13 +50,13 @@ func TestPopulateWalletPool(t *testing.T) {
 	fb := fireblocks.NewFireblocksSession(fbBaseURL)
 	threshold := 1
 
-	walletChannel := make(chan m.Wallet, threshold)
+	walletChannel := make(chan service.Wallet, threshold)
 	defer close(walletChannel)
 
 	ctx, cancelWalletPool := context.WithCancel(context.Background())
 	defer cancelWalletPool()
 
-	go m.PopulateWalletPool(walletChannel, ctx, threshold, &fb)
+	go service.PopulateWalletPool(walletChannel, ctx, threshold, &fb)
 	wallet := <-walletChannel
 
 	if wallet.AddressBTC == "" {
@@ -86,14 +86,14 @@ func TestCreateUser(t *testing.T) {
 	fb := fireblocks.NewFireblocksSession(fbBaseURL)
 
 	threshold := 1
-	walletChannel := make(chan m.Wallet, threshold)
+	walletChannel := make(chan service.Wallet, threshold)
 	defer close(walletChannel)
 
 	ctx, cancelWalletPool := context.WithCancel(context.Background())
 	defer cancelWalletPool()
-	go m.PopulateWalletPool(walletChannel, ctx, threshold, &fb)
+	go service.PopulateWalletPool(walletChannel, ctx, threshold, &fb)
 
-	data := m.Data{DB: db, Wallets: walletChannel}
+	data := service.Data{DB: db, Wallets: walletChannel}
 
 	user, err := data.CreateUser()
 	if err != nil {
