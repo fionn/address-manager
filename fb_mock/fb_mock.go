@@ -93,7 +93,10 @@ func writeError(w http.ResponseWriter, httpErrorCode int, message string, apiErr
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(httpErrorCode)
-	w.Write(fbError)
+	_, err = w.Write(fbError)
+	if err != nil {
+		log.Print(err)
+	}
 }
 
 // Handler to create a new vault. See

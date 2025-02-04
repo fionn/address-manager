@@ -67,8 +67,8 @@ type VaultWallet struct {
 }
 
 type Fireblocks struct {
-	baseURL     url.URL
-	credentials any // Placeholder.
+	baseURL url.URL
+	// We would put a credentials field in here too.
 }
 
 // Placeholder for Fireblocks session constructor. We'll need this to pass
