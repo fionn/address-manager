@@ -7,6 +7,32 @@ permissions:
 
 jobs:
 
+  lint:
+
+    name: Lint
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      checks: write
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.23
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.63
+
   build:
 
     name: Build
