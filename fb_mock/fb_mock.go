@@ -33,12 +33,10 @@ type FBError struct {
 }
 
 // Generate a slice of cryptographically secure random bytes of length size.
-func randomBytes(size int) ([]byte, error) {
+func randomBytes(size int) []byte {
 	b := make([]byte, size)
-	if _, err := rand.Read(b); err != nil {
-		return []byte{}, err
-	}
-	return b, nil
+	rand.Read(b) //nolint:errcheck
+	return b
 }
 
 // Generate a random Bech32 address.
@@ -46,10 +44,7 @@ func generateBTCAddress() (string, error) {
 	// Because we're not using a real keypair, this is just fed into some hash
 	// functions. As such, we don't really care what it is, so just use some
 	// random bytes.
-	fakePubKey, err := randomBytes(20)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate random bytes: %s", err)
-	}
+	fakePubKey := randomBytes(20)
 
 	hashedPubKey := btcutil.Hash160(fakePubKey)
 	witnessProgram, err := bech32.ConvertBits(hashedPubKey, 8, 5, true)
@@ -67,8 +62,8 @@ func generateBTCAddress() (string, error) {
 
 // Generate a random Solana address (32 bytes base-58 encoded).
 func generateSOLAddress() (string, error) {
-	fakePubKey, err := randomBytes(32)
-	return base58.Encode(fakePubKey), err
+	fakePubKey := randomBytes(32)
+	return base58.Encode(fakePubKey), nil
 }
 
 // Given an asset ID (e.g. "BTC"), return a random address for it.
