@@ -95,6 +95,11 @@ func PopulateWalletPool(c chan<- Wallet, ctx context.Context, threshold int, fb 
 				}
 				c <- *wallet
 			}
+			// Sleep to cool this loop down, otherwise it will churn the CPU.
+			// TODO: choose an optimal duration.
+			// TODO: consider "waking up" the loop on allocation (e.g. with
+			//       another context).
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }
